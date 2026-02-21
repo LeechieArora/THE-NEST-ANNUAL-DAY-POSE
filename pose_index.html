@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>POSE INDEX – The Nest School</title>
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, Arial, sans-serif;
+  background: linear-gradient(180deg, #020617, #0f172a);
+  color: white;
+  text-align: center;
+}
+
+/* Layout */
+.container {
+  padding: 16px;
+}
+
+/* Camera */
+video {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: 18px;
+  border: 3px solid #38bdf8;
+  background: #020617;
+}
+
+/* Button */
+button {
+  margin-top: 16px;
+  padding: 16px;
+  width: 100%;
+  font-size: 20px;
+  border-radius: 18px;
+  border: none;
+  background: #38bdf8;
+  color: #020617;
+  font-weight: bold;
+}
+
+/* Score */
+.score {
+  font-size: 64px;
+  margin: 20px 0;
+  animation: pop 0.6s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.feedback {
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+/* Dashboard */
+.dashboard {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.bar {
+  background: #1e293b;
+  border-radius: 12px;
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.fill {
+  height: 36px;
+  line-height: 36px;
+  padding-left: 12px;
+  font-weight: bold;
+  color: #020617;
+}
+
+.joy { background: #facc15; }
+.playfulness { background: #fb7185; }
+.togetherness { background: #4ade80; }
+.calm { background: #60a5fa; }
+.curiosity { background: #c084fc; }
+
+.footer {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>POSE INDEX 😊</h1>
+<p>Real-time AI pose & emotion reflection</p>
+
+<video id="video" playsinline autoplay muted></video>
+
+<button onclick="capturePose()">📸 Capture Pose</button>
+
+<div class="score" id="score">—</div>
+<div class="feedback" id="feedback"></div>
+
+<div class="dashboard">
+  <h3>🌈 Event Emotion Pulse</h3>
+
+  <div class="bar"><div id="joy" class="fill joy">Joy: 0</div></div>
+  <div class="bar"><div id="playfulness" class="fill playfulness">Playfulness: 0</div></div>
+  <div class="bar"><div id="togetherness" class="fill togetherness">Togetherness: 0</div></div>
+  <div class="bar"><div id="calm" class="fill calm">Calm: 0</div></div>
+  <div class="bar"><div id="curiosity" class="fill curiosity">Curiosity: 0</div></div>
+</div>
+
+<div class="footer">
+AI reflections are playful interpretations, not evaluations.
+</div>
+
+</div>
+
+<script>
+/* CAMERA */
+const video = document.getElementById("video");
+
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+  .then(stream => video.srcObject = stream);
+
+/* POSE AI */
+let lastPose = null;
+
+const pose = new Pose({
+  locateFile: file =>
+    `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+});
+
+pose.setOptions({
+  modelComplexity: 1,
+  smoothLandmarks: true,
+  minDetectionConfidence: 0.5,
+  minTrackingConfidence: 0.5
+});
+
+pose.onResults(results => {
+  if (results.poseLandmarks) {
+    lastPose = results.poseLandmarks;
+  }
+});
+
+const camera = new Camera(video, {
+  onFrame: async () => {
+    await pose.send({ image: video });
+  },
+  width: 720,
+  height: 960
+});
+
+camera.start();
+
+/* EMOTION MEMORY */
+const emotions = {
+  Joy: 0,
+  Playfulness: 0,
+  Togetherness: 0,
+  Calm: 0,
+  Curiosity: 0
+};
+
+/* MAIN LOGIC */
+function capturePose() {
+  if (!lastPose) {
+    document.getElementById("feedback").innerHTML = "😅 Hold still, reading pose...";
+    return;
+  }
+
+  const leftWrist = lastPose[15];
+  const rightWrist = lastPose[16];
+  const leftShoulder = lastPose[11];
+  const rightShoulder = lastPose[12];
+
+  const armSpread = Math.abs(leftWrist.x - rightWrist.x);
+  const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+  const openness = armSpread / shoulderWidth;
+
+  let score = Math.min(100, Math.floor(60 + openness * 25 + Math.random() * 10));
+
+  let vibe = "Calm";
+  let emoji = "😌";
+
+  if (openness > 2.2) { vibe = "Joy"; emoji = "😄"; }
+  else if (openness > 1.8) { vibe = "Playfulness"; emoji = "🤪"; }
+  else if (openness > 1.4) { vibe = "Togetherness"; emoji = "🤝"; }
+  else if (openness < 1.1) { vibe = "Curiosity"; emoji = "🤔"; }
+
+  emotions[vibe]++;
+
+  document.getElementById("score").innerHTML = score + " / 100";
+  document.getElementById("feedback").innerHTML =
+    `${emoji} <b>${vibe}</b><br>This pose reflects openness and presence.`;
+
+  updateDashboard();
+}
+
+/* DASHBOARD */
+function updateDashboard() {
+  const max = Math.max(...Object.values(emotions), 1);
+  for (let e in emotions) {
+    const el = document.getElementById(e.toLowerCase());
+    const percent = Math.round((emotions[e] / max) * 100);
+    el.style.width = percent + "%";
+    el.innerHTML = e + ": " + emotions[e];
+  }
+}
+</script>
+
+</body>
+</html>
