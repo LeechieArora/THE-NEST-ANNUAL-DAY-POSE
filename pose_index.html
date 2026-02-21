@@ -1,16 +1,34 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Detection App</title>
     <style>
-        video {
-            pointer-events: none;
-        }
-        .your-button-class {
-            z-index: 10; /* Adjust this value as needed */
-        }
+        body { margin: 0; padding: 0; }
+        /* Fix: Pointer events for the video */
+        video { pointer-events: none; }
+        /* Button z-index layering for mobile responsiveness */
+        .button { position: relative; z-index: 2; }
     </style>
 </head>
 <body>
-    <video src="your-video-source.mp4" controls></video>
-    <button class="your-button-class">Your Button</button>
+    <video id="video" autoplay></video>
+    <button class="button">Start Pose Detection</button>
+    <script>
+        // JavaScript code to handle video and pose detection
+        const video = document.getElementById('video');
+
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error(`Error accessing camera: ${err}`);
+            });
+
+        // Pose detection code here
+    </script>
 </body>
 </html>
