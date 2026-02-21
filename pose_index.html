@@ -3,32 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pose Detection App</title>
+    <title>Pose Detection</title>
     <style>
-        body { margin: 0; padding: 0; }
-        /* Fix: Pointer events for the video */
-        video { pointer-events: none; }
-        /* Button z-index layering for mobile responsiveness */
-        .button { position: relative; z-index: 2; }
+        body { font-family: Arial, sans-serif; }
+        .button { position: relative; z-index: 10; }
+        .error { color: red; }
+        .status { color: green; }
     </style>
 </head>
 <body>
-    <video id="video" autoplay></video>
-    <button class="button">Start Pose Detection</button>
+    <h1>Pose Detection</h1>
+    <button class="button" id="startBtn">Start</button>
+    <button class="button" id="stopBtn">Stop</button>
+    <div id="statusMessages"></div>
+    <div class="error" id="errorMessages"></div>
+
     <script>
-        // JavaScript code to handle video and pose detection
-        const video = document.getElementById('video');
+        const statusMessages = document.getElementById('statusMessages');
+        const errorMessages = document.getElementById('errorMessages');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        let videoStream;
 
-        // Access the camera
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(stream => {
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                console.error(`Error accessing camera: ${err}`);
-            });
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.querySelector('video').srcObject = stream;
+                videoStream = stream;
+                statusMessages.textContent = 'Camera initialized successfully.';
+            } catch (error) {
+                handleError(error);
+            }
+        }
 
-        // Pose detection code here
+        function handleError(error) {
+            console.error(error);
+            let errorMsg = 'Error accessing camera: ';
+            if (error.name === 'NotAllowedError') {
+                errorMsg += 'Camera access denied.';
+            } else if (error.name === 'NotFoundError') {
+                errorMsg += 'No camera available.';
+            } else {
+                errorMsg += 'General error occurred.';
+            }
+            errorMessages.textContent = errorMsg;
+        }
+
+        startBtn.addEventListener('click', () => {
+            errorMessages.textContent = ''; // Clear any previous error messages
+            initCamera();
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                statusMessages.textContent = 'Camera stopped.';
+            }
+        });
+
+        initCamera();
     </script>
 </body>
 </html>
